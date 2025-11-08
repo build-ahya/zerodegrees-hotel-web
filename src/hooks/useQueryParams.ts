@@ -1,22 +1,32 @@
-import { AnyObject } from '@/types';
-import { useState, useEffect } from 'react';
+"use client";
+import { AnyObject, QueryParams } from '@/types';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
-const useQueryParams = () => {
-  const [queryParams, setQueryParams] = useState({});
+const useQueryParams = (): QueryParams => {
+  const search = useSearchParams();
+  const [queryParams, setQueryParams] = useState<QueryParams>({
+    checkIn: 0,
+    checkOut: 0,
+    adults: 1,
+    children: 0,
+  });
 
   useEffect(() => {
-    if (window === undefined) {
-      return;
-    }
-    const query = new URLSearchParams(
-      window.location.search
-    ) as unknown as AnyObject[];
-    const params: AnyObject = {};
-    query.forEach((value, key) => {
-      params[key] = value;
+    // Safely read and coerce numeric query params; fall back to defaults
+    const numeric = (key: string, fallback: number): number => {
+      const val = search.get(key);
+      const num = val !== null ? Number(val) : NaN;
+      return Number.isFinite(num) ? num : fallback;
+    };
+
+    setQueryParams({
+      checkIn: numeric('checkIn', 0),
+      checkOut: numeric('checkOut', 0),
+      adults: numeric('adults', 1),
+      children: numeric('children', 0),
     });
-    setQueryParams(params);
-  }, []);
+  }, [search]);
 
   return queryParams;
 };

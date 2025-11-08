@@ -7,7 +7,7 @@ const description =
 
 const slogan = 'Where Luxury Meets Serenity';
 
-const baseUrl = 'https://www.zerodegreeshotel.ng';
+const baseUrl = 'https://zerodegreeshotel.ng';
 
 const openGraphImage = `${baseUrl}/images/open-graph-image.jpg`;
 

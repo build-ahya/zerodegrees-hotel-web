@@ -1,15 +1,14 @@
 'use client';
 
 // import useSWR from 'swr';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { useCallback, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Container from '@/components/container';
 import { ReservationForm } from '@/components/forms';
 import useQueryParams from '@/hooks/useQueryParams';
 import Room, { RoomType } from '@/models/room';
 // import APIService from '@/lib/api';
-import { AnyObject, QueryParams } from '@/types';
+import { QueryParams } from '@/types';
 import { FilterList } from '@/components/list';
 import { RoomCard } from '@/components/cards';
 import Empty from '@/components/empty';
@@ -57,42 +56,39 @@ export default function ReservationSection1() {
   // );
   const isLoading = false;
   const [roomType, setRoomType] = useState('all');
-  const pathname = usePathname();
 
-  const filterRoomsByAvailability = useCallback(
-    (list: Room[]): Room[] => {
-      const { checkIn, checkOut } = queryParams;
+  const filterRoomsByAvailability = useCallback((list: Room[]): Room[] => {
+    const { checkIn, checkOut } = queryParams;
 
-      return list.filter((room) => {
-        // If no availability is set for this property, it's available
-        if (room.availability.length === 0) {
-          return true;
-        }
+    // If no date range is provided, return all active rooms
+    if (!checkIn || !checkOut || checkOut <= checkIn) return list;
 
-        // Check if the property has an availability slot that does not conflict with the requested checkIn/checkOut
-        return !room.availability.some((available) => {
-          // The property is not available if its availability period overlaps with the requested dates
-          const isOverlap =
-            (checkIn >= available.checkIn && checkIn < available.checkOut) || // Requested checkIn is within the availability period
-            (checkOut > available.checkIn && checkOut <= available.checkOut) || // Requested checkOut is within the availability period
-            (checkIn <= available.checkIn && checkOut >= available.checkOut); // Requested range fully encompasses the availability period
+    return list.filter((room) => {
+      // If no availability info is set for this room, assume available
+      if (!room.availability || room.availability.length === 0) {
+        return true;
+      }
 
-          return isOverlap;
-        });
+      // If any availability period fully covers the requested range, treat as available
+      const isAvailable = room.availability.some((available) => {
+        const startsBeforeOrAt = available.checkIn <= checkIn;
+        const endsAfterOrAt = available.checkOut >= checkOut;
+        return startsBeforeOrAt && endsAfterOrAt;
       });
-    },
-    [queryParams, pathname]
-  );
+
+      return isAvailable;
+    });
+  }, [queryParams]);
 
   const filteredRooms = useMemo(() => {
     const availableRooms = filterRoomsByAvailability(rooms);
 
     if (roomType !== 'all') {
-      return rooms.filter((item) => item.type === roomType);
+      return availableRooms.filter((item) => item.type === roomType);
     }
 
     return availableRooms;
-  }, [rooms, roomType]);
+  }, [filterRoomsByAvailability, roomType]);
 
   return (
     <>
